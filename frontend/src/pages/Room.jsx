@@ -60,7 +60,7 @@ const MAX_CODE_LEN    = 100_000;
 
 const sanitiseUsername = (raw) => {
   if (!raw || typeof raw !== 'string') return 'Anonymous';
-  const c = raw.replace(/<[^>]*>/g, '').replace(new RegExp('[\\u0000-\\u001F\\u007F]', 'g'), '').trim().slice(0, 30); 
+  const c = raw.replace(/<[^>]*>/g, '').replace(new RegExp('[\\u0000-\\u001F\\u007F]', 'g'), '').trim().slice(0, 30); // eslint-disable-line no-control-regex
   return c || 'Anonymous';
 };
 
