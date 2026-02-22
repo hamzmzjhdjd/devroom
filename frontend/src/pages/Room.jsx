@@ -4,7 +4,7 @@ import Editor from '@monaco-editor/react';
 import { io } from 'socket.io-client';
 import AgoraRTC from 'agora-rtc-sdk-ng';
 
-// ── HOLE-A FIX: centralise API base — never hardcode localhost in multiple spots
+
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const LANGUAGES = [
@@ -37,47 +37,41 @@ const STARTER_CODE = {
   kotlin:     'fun main() {\n    println("Hello, DevRoom!")\n}\n',
 };
 
-// ── Judge0 CE language ID map ──────────────────────────────────────────────
-// Piston public API shut down on 2/15/2026 — switched to Judge0 CE.
-// Judge0 uses numeric language_id values. These are the official CE IDs.
-// API docs: https://ce.judge0.com
-// No API key needed for ce.judge0.com (free public instance, no RapidAPI required)
+
 const JUDGE0_LANG_ID = {
-  python:     71,   // Python (3.8.1)
-  javascript: 63,   // JavaScript (Node.js 12.14.0)
-  typescript: 74,   // TypeScript (3.7.4)
-  java:       62,   // Java (OpenJDK 13.0.1)
-  cpp:        54,   // C++ (GCC 9.2.0)
-  c:          50,   // C (GCC 9.2.0)
-  csharp:     51,   // C# (Mono 6.6.0.161)
-  go:         60,   // Go (1.13.5)
-  rust:       73,   // Rust (1.40.0)
-  php:        68,   // PHP (7.4.1)
-  ruby:       72,   // Ruby (2.7.0)
-  kotlin:     78,   // Kotlin (1.3.70)
+  python:     71,   
+  javascript: 63,   
+  typescript: 74,   
+  java:       62,   
+  cpp:        54,   
+  c:          50,   
+  csharp:     51,   
+  go:         60,   
+  rust:       73,   
+  php:        68,   
+  ruby:       72,   
+  kotlin:     78,   
 };
 
 const USER_COLORS     = ['#38bdf8','#34d399','#fb923c','#f472b6','#a78bfa','#facc15','#f87171','#2dd4bf'];
 const VALID_LANG_IDS  = new Set(Object.keys(JUDGE0_LANG_ID));
 const MAX_CODE_LEN    = 100_000;
 
-// ── HOLE-1 FIX: sanitise username from URL — prevents XSS
+
 const sanitiseUsername = (raw) => {
   if (!raw || typeof raw !== 'string') return 'Anonymous';
   const c = raw.replace(/<[^>]*>/g, '').replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 30);
   return c || 'Anonymous';
 };
 
-// ── BUG-3 FIX: file extension lookup — centralised so it can't drift out of sync
+
 const LANG_EXT = {
   javascript: 'js', typescript: 'ts', python: 'py', java: 'java',
   cpp: 'cpp', c: 'c', csharp: 'cs', go: 'go', rust: 'rs',
   php: 'php', ruby: 'rb', kotlin: 'kt',
 };
 
-// ── FEATURE: Custom editor themes that match DevRoom's aesthetic ──────────
-// All custom themes are registered in Monaco via the onMount callback below.
-// Each theme is designed to complement the dark blue/cyan/violet UI palette.
+
 const EDITOR_THEMES = [
   { id: 'devroom-dark',    name: 'DevRoom',    icon: '🌌', desc: 'Default deep space' },
   { id: 'devroom-ocean',   name: 'Ocean',      icon: '🌊', desc: 'Deep ocean blues'   },
@@ -87,9 +81,9 @@ const EDITOR_THEMES = [
   { id: 'devroom-matrix',  name: 'Matrix',     icon: '🟩', desc: 'Classic green rain' },
 ];
 
-// Registered inside Monaco onMount — defineTheme needs monaco instance
+
 const defineCustomThemes = (monaco) => {
-  // ── DevRoom (default — matches UI exactly) ────────────────────────────
+  
   monaco.editor.defineTheme('devroom-dark', {
     base: 'vs-dark', inherit: true,
     rules: [
@@ -120,7 +114,7 @@ const defineCustomThemes = (monaco) => {
     },
   });
 
-  // ── Ocean ─────────────────────────────────────────────────────────────
+  
   monaco.editor.defineTheme('devroom-ocean', {
     base: 'vs-dark', inherit: true,
     rules: [
@@ -147,7 +141,7 @@ const defineCustomThemes = (monaco) => {
     },
   });
 
-  // ── Aurora ────────────────────────────────────────────────────────────
+  
   monaco.editor.defineTheme('devroom-aurora', {
     base: 'vs-dark', inherit: true,
     rules: [
@@ -175,7 +169,7 @@ const defineCustomThemes = (monaco) => {
     },
   });
 
-  // ── Midnight ──────────────────────────────────────────────────────────
+  
   monaco.editor.defineTheme('devroom-midnight', {
     base: 'vs-dark', inherit: true,
     rules: [
@@ -202,7 +196,7 @@ const defineCustomThemes = (monaco) => {
     },
   });
 
-  // ── Ember ─────────────────────────────────────────────────────────────
+  
   monaco.editor.defineTheme('devroom-ember', {
     base: 'vs-dark', inherit: true,
     rules: [
@@ -229,7 +223,7 @@ const defineCustomThemes = (monaco) => {
     },
   });
 
-  // ── Matrix ────────────────────────────────────────────────────────────
+  
   monaco.editor.defineTheme('devroom-matrix', {
     base: 'vs-dark', inherit: true,
     rules: [
@@ -261,17 +255,16 @@ const Room = () => {
   const { roomId }        = useParams();
   const [searchParams]    = useSearchParams();
   const navigate          = useNavigate();
-  // HOLE-1 FIX: sanitise username taken from URL query string
+  
   const username = sanitiseUsername(searchParams.get('username'));
 
   const socketRef       = useRef(null);
   const editorRef       = useRef(null);
   const cursorRef       = useRef(null);
   const ringRef         = useRef(null);
-  // HOLE-2 FIX: client-side run-code rate limit (max 5 runs per 30 seconds)
+  
   const runTimestamps   = useRef([]);
-  // BUG-4 FIX: track whether we're currently applying a remote update so we
-  // don't echo it back to the server (infinite loop / thrash prevention)
+  
   const applyingRemote  = useRef(false);
 
   const [code,              setCode]              = useState(STARTER_CODE['javascript']);
@@ -289,26 +282,26 @@ const Room = () => {
   const [exported,          setExported]          = useState(false);
   const [gistUrl,           setGistUrl]           = useState('');
   const [sharingGist,       setSharingGist]       = useState(false);
-  // ── FEATURE: Chat ─────────────────────────────────────────────────────────
+  
   const [showChat,          setShowChat]          = useState(false);
   const [messages,          setMessages]          = useState([]);
   const [chatInput,         setChatInput]         = useState('');
   const [unreadCount,       setUnreadCount]       = useState(0);
   const chatBottomRef = useRef(null);
   const chatInputRef  = useRef(null);
-  // ── FEATURE: Room History ────────────────────────────────────────────────
+  
   const [history,       setHistory]       = useState([]);
   const [showHistory,   setShowHistory]   = useState(false);
   const [restoringIdx,  setRestoringIdx]  = useState(null);
 
-  // ── FEATURE: Live cursors in editor ──────────────────────────────────────
+  
   const remoteCursors    = useRef({});
   const monacoRef        = useRef(null);
-  const lastCursorEmit   = useRef(0); // throttle cursor-move to max 20/sec
+  const lastCursorEmit   = useRef(0); 
 
   const myColor = useRef(USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)]);
 
-  // ── AGORA: Video/Voice Call ────────────────────────────────────────────────
+  
   const agoraClient     = useRef(null);
   const localAudioTrack = useRef(null);
   const localVideoTrack = useRef(null);
@@ -318,7 +311,7 @@ const Room = () => {
   const [remoteUsers,   setRemoteUsers]   = useState([]);
 
   const joinCall = async () => {
-    const APP_ID = 'YOUR_APP_ID_HERE'; // ← paste your Agora App ID
+    const APP_ID = '6d749d7111a14d7385ade0f8ba62d0ae'; 
     const res    = await fetch(`${API_BASE}/api/agora-token?channel=${roomId}`);
     const { token } = await res.json();
 
@@ -367,7 +360,7 @@ const Room = () => {
     setCamOff(off);
   };
 
-  // ── CURSOR ────────────────────────────────────────────────────────────────
+  
   useEffect(() => {
     let mx = 0, my = 0, rx = 0, ry = 0, animId;
     const onMove = (e) => {
@@ -381,13 +374,13 @@ const Room = () => {
     };
     loop();
     document.addEventListener('mousemove', onMove);
-    // BUG-5 FIX: cleanup order — cancel RAF before removing listener
+    
     return () => { cancelAnimationFrame(animId); document.removeEventListener('mousemove', onMove); };
   }, []);
 
-  // ── SOCKET ────────────────────────────────────────────────────────────────
+  
   useEffect(() => {
-    // HOLE-A FIX: use centralised API_BASE
+    
     const socket = io(API_BASE, {
       reconnection:        true,
       reconnectionAttempts: 10,
@@ -406,7 +399,7 @@ const Room = () => {
       setConnected(false);
     });
 
-    // SECURITY: server rejected the join — redirect home
+    
     socket.on('join-error', ({ message }) => {
       alert(`⚠ ${message}`);
       socket.disconnect();
@@ -415,7 +408,7 @@ const Room = () => {
 
     socket.on('room-state', (state) => {
       if (state.language && VALID_LANG_IDS.has(state.language)) setLanguage(state.language);
-      // BUG-4 FIX: mark as remote so handleCodeChange doesn't re-emit it
+      
       if (typeof state.code === 'string' && state.code.length <= MAX_CODE_LEN) {
         applyingRemote.current = true;
         setCode(state.code);
@@ -424,14 +417,14 @@ const Room = () => {
       if (Array.isArray(state.history)) setHistory(state.history);
     });
 
-    // HOLE-5 FIX + BUG-4 FIX: validate type/size AND mark as remote update
+    
     socket.on('code-update', (newCode) => {
       if (typeof newCode !== 'string' || newCode.length > MAX_CODE_LEN) return;
       applyingRemote.current = true;
       setCode(newCode);
     });
 
-    // HOLE-4 FIX: validate language against known list before trusting it
+    
     socket.on('language-update', (lang) => {
       if (!VALID_LANG_IDS.has(lang)) return;
       applyingRemote.current = true;
@@ -439,7 +432,7 @@ const Room = () => {
       setCode(STARTER_CODE[lang] || '');
     });
 
-    // ── THEME UPDATE: receive theme change from another user ─────────────────
+    
     socket.on('theme-update', ({ theme: newTheme }) => {
       if (typeof newTheme === 'string' && EDITOR_THEMES.find(t => t.id === newTheme)) {
         setTheme(newTheme);
@@ -447,7 +440,7 @@ const Room = () => {
       }
     });
 
-    // ── CODE OUTPUT UPDATE: receive output from another user running code ────
+    
     socket.on('code-output-update', ({ output: remoteOutput, status: remoteStatus }) => {
       if (typeof remoteOutput === 'string' && typeof remoteStatus === 'string') {
         setOutput(remoteOutput);
@@ -456,12 +449,12 @@ const Room = () => {
       }
     });
 
-    // ── HISTORY: receive updated history from server ───────────────────────
+  
     socket.on('history-update', (snapshots) => {
       if (Array.isArray(snapshots)) setHistory(snapshots);
     });
 
-    // ── SNAPSHOT RESTORED: notify room someone restored ───────────────────
+  
     socket.on('snapshot-restored', ({ username: restorer }) => {
       setOutput(`✦ ${restorer} restored a previous snapshot`);
       setOutputStatus('success');
@@ -477,22 +470,22 @@ const Room = () => {
 
     socket.on('user-left', (userId) => {
       setUsers(prev => prev.filter(u => u.id !== userId));
-      // Remove live cursor decoration for user who left
+      
       setRemoteCursorById(userId, null);
     });
 
-    // ── CHAT: receive message from another user ────────────────────────────
+    
     socket.on('chat-message', ({ socketId, username: fromUser, text, timestamp }) => {
       if (typeof text !== 'string' || text.length > 500) return;
       setMessages(prev => [...prev, { socketId, username: fromUser, text, timestamp, own: false }]);
-      // If chat is closed, increment unread badge
+     
       setShowChat(prev => {
         if (!prev) setUnreadCount(c => c + 1);
         return prev;
       });
     });
 
-    // ── LIVE CURSORS: receive remote cursor position ───────────────────────
+    
     socket.on('cursor-move', ({ socketId, username: cursorUser, color, line, column }) => {
       if (typeof line !== 'number' || typeof column !== 'number') return;
       updateRemoteCursor(socketId, cursorUser, color, line, column);
@@ -503,24 +496,23 @@ const Room = () => {
     };
   }, [roomId, username, navigate]);
 
-  // ── CODE CHANGE ───────────────────────────────────────────────────────────
-  // BUG-4 FIX: only emit to server when the change is LOCAL (not a remote echo)
+  
   const handleCodeChange = useCallback((value) => {
-    // If this update was triggered by a remote socket event, swallow the emit
+
     if (applyingRemote.current) {
       applyingRemote.current = false;
       setCode(value);
       return;
     }
     setCode(value);
-    // HOLE-3 FIX: don't send oversized code to server either
+    
     if (!value || value.length > MAX_CODE_LEN) return;
     socketRef.current?.emit('code-change', { roomId, code: value });
   }, [roomId]);
 
-  // ── LANGUAGE CHANGE ───────────────────────────────────────────────────────
+  
   const handleLanguageChange = (langId) => {
-    if (!VALID_LANG_IDS.has(langId)) return; // extra safety guard
+    if (!VALID_LANG_IDS.has(langId)) return; 
     setLanguage(langId);
     const newCode = STARTER_CODE[langId] || '';
     setCode(newCode);
@@ -531,12 +523,9 @@ const Room = () => {
     setOutputStatus('idle');
   };
 
-  // ── RUN CODE ──────────────────────────────────────────────────────────────
-  // Uses Judge0 CE public API (https://ce.judge0.com)
-  // Piston shut down its public API on 2/15/2026 — Judge0 is the replacement.
-  // Judge0 is async: step 1 = submit, step 2 = poll until done.
+  
   const runCode = async () => {
-    // Client-side rate limit — max 5 runs per 30 seconds
+    
     const now = Date.now();
     runTimestamps.current = runTimestamps.current.filter(t => now - t < 30_000);
     if (runTimestamps.current.length >= 5) {
@@ -547,7 +536,7 @@ const Room = () => {
     }
     runTimestamps.current.push(now);
 
-    // Cap code size before sending
+    
     if (!code || code.length > MAX_CODE_LEN) {
       setOutput('Error: Code is too large to run (max 100KB).');
       setOutputStatus('error');
@@ -569,9 +558,7 @@ const Room = () => {
     socketRef.current?.emit('code-output', { roomId, output: '⟳ Running...', status: 'running' });
 
     try {
-      // ── STEP 1: Submit the code to Judge0 ──────────────────────────────
-      // wait=true asks Judge0 to wait for execution and return result immediately
-      // This avoids the need to poll in most cases (faster for short programs)
+    
       const submitRes = await fetch('https://ce.judge0.com/submissions?base64_encoded=false&wait=true', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -590,8 +577,7 @@ const Room = () => {
 
       let result = await submitRes.json();
 
-      // ── STEP 2: If still processing, poll until done (max 10s) ─────────
-      // Judge0 status IDs: 1=In Queue, 2=Processing, 3=Accepted, 4+=error states
+      
       let attempts = 0;
       while ((result.status?.id === 1 || result.status?.id === 2) && attempts < 10) {
         await new Promise(r => setTimeout(r, 1000));
@@ -603,7 +589,7 @@ const Room = () => {
         attempts++;
       }
 
-      // ── STEP 3: Build output string from result ─────────────────────────
+      
       const stdout     = result.stdout         || '';
       const stderr     = result.stderr         || '';
       const compileErr = result.compile_output || '';
@@ -615,7 +601,7 @@ const Room = () => {
       if (stdout)     finalOut += stdout;
       if (stderr)     finalOut += stderr;
 
-      // Judge0 status 3 = Accepted (success), anything else is an error state
+      
       if (!finalOut) {
         finalOut = statusId === 3
           ? '(program exited with no output)'
@@ -639,12 +625,11 @@ const Room = () => {
     }
   };
 
-  // ── COPY ROOM ID ──────────────────────────────────────────────────────────
+  
   const copyRoomId = () => {
-    // BUG-9 FIX: clipboard API can fail in non-secure contexts (http) or if
-    // the user denies permission — handle the rejection gracefully
+    
     navigator.clipboard.writeText(roomId).catch(() => {
-      // Fallback: select a hidden input with the room ID
+      
       const el = document.createElement('textarea');
       el.value = roomId;
       el.style.position = 'fixed'; el.style.opacity = '0';
@@ -657,7 +642,7 @@ const Room = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // BUG-10 FIX: close lang dropdown when clicking anywhere outside it
+  
   useEffect(() => {
     if (!showLangDropdown) return;
     const handler = (e) => {
@@ -667,7 +652,7 @@ const Room = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [showLangDropdown]);
 
-  // ── FEATURE: Close theme dropdown when clicking outside ───────────────────
+
   useEffect(() => {
     if (!showThemeDropdown) return;
     const handler = (e) => {
@@ -677,7 +662,7 @@ const Room = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [showThemeDropdown]);
 
-  // ── FEATURE: Export / Save code as file ───────────────────────────────────
+  
   const exportCode = () => {
     const ext      = LANG_EXT[language] || 'txt';
     const filename = `devroom_${roomId}.${ext}`;
@@ -692,7 +677,7 @@ const Room = () => {
     setTimeout(() => setExported(false), 2000);
   };
 
-  // ── FEATURE: Share code as GitHub Gist ───────────────────────────────────
+
   const shareAsGist = async () => {
     setSharingGist(true);
     try {
@@ -729,20 +714,19 @@ const Room = () => {
     setSharingGist(false);
   };
 
-  // ── LIVE CURSORS: update a remote user's cursor decoration in Monaco ──────
-  // Uses Monaco's deltaDecorations to draw a colored cursor line + label overlay
+  
   const updateRemoteCursor = (socketId, cursorUsername, color, line, column) => {
     const editor = editorRef.current;
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
     const prev = remoteCursors.current[socketId];
-    // Remove old decoration
+    
     if (prev?.decorationIds) {
       editor.deltaDecorations(prev.decorationIds, []);
     }
 
-    // Draw new cursor: a thin colored line at the exact position + username label
+    
     const newDecorationIds = editor.deltaDecorations([], [
       {
         range: new monaco.Range(line, column, line, column),
@@ -754,7 +738,7 @@ const Room = () => {
       },
     ]);
 
-    // Inject per-user CSS for the cursor color (done once per user)
+    
     const safeId = socketId.replace(/[^a-z0-9]/gi, '');
     const styleId = `cursor-style-${safeId}`;
     if (!document.getElementById(styleId)) {
@@ -798,7 +782,7 @@ const Room = () => {
     if (styleEl) styleEl.remove();
   };
 
-  // ── CHAT: send a message ───────────────────────────────────────────────────
+  
   const sendMessage = () => {
     const text = chatInput.trim();
     if (!text || text.length > 500) return;
@@ -809,19 +793,19 @@ const Room = () => {
     setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
   };
 
-  // ── HISTORY: restore a snapshot ──────────────────────────────────────────
+  
   const restoreSnapshot = (index) => {
     setRestoringIdx(index);
     socketRef.current?.emit('restore-snapshot', { roomId, index });
     setTimeout(() => setRestoringIdx(null), 1500);
   };
 
-  // Auto-scroll chat when new messages arrive
+  
   useEffect(() => {
     if (showChat) chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, showChat]);
 
-  // Clear unread count when chat is opened
+  
   useEffect(() => {
     if (showChat) setUnreadCount(0);
   }, [showChat]);
@@ -1474,14 +1458,14 @@ const Room = () => {
                 onMount={(editor, monaco) => {
                   editorRef.current = editor;
                   monacoRef.current = monaco;
-                  // Register all custom themes as soon as Monaco is ready
+                  
                   defineCustomThemes(monaco);
-                  // Apply the currently selected theme immediately
+                  
                   monaco.editor.setTheme(theme);
-                  // ── LIVE CURSORS: emit on cursor position change (typing) ──
+                
                   const emitCursor = (lineNumber, column) => {
                     const now = Date.now();
-                    if (now - lastCursorEmit.current < 50) return; // max 20/sec
+                    if (now - lastCursorEmit.current < 50) return; 
                     lastCursorEmit.current = now;
                     socketRef.current?.emit('cursor-move', {
                       roomId,
@@ -1491,23 +1475,23 @@ const Room = () => {
                     });
                   };
 
-                  // Fires when cursor moves via typing
+                  
                   editor.onDidChangeCursorPosition((e) => {
                     emitCursor(e.position.lineNumber, e.position.column);
                   });
 
-                  // Fires when user clicks in the editor — ensures click-to-move works
+                  
                   editor.onMouseDown((e) => {
                     if (e.target?.position) {
-                      // Bypass throttle on click so it registers instantly
+                      
                       lastCursorEmit.current = 0;
                       emitCursor(e.target.position.lineNumber, e.target.position.column);
                     }
                   });
 
-                  // Fires on keyboard arrow key navigation
+                  
                   editor.onKeyDown((e) => {
-                    // Small delay so position has updated before we read it
+                    
                     setTimeout(() => {
                       const pos = editor.getPosition();
                       if (pos) emitCursor(pos.lineNumber, pos.column);
@@ -1589,7 +1573,7 @@ const Room = () => {
         </div>
       )}
 
-      {/* ── JOIN CALL BUTTON (fixed bottom right) ── */}
+      
       {!inCall && (
         <button onClick={joinCall} style={{position:'fixed',bottom:'20px',right:'20px',zIndex:1000,padding:'12px 20px',background:'linear-gradient(135deg,#0284c7,#38bdf8)',border:'none',borderRadius:'12px',color:'white',fontWeight:'700',fontSize:'14px',cursor:'pointer',boxShadow:'0 4px 20px rgba(56,189,248,0.4)',fontFamily:"'Space Grotesk',sans-serif"}}>
           📹 Join Voice/Video

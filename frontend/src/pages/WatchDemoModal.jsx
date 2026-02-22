@@ -1,9 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
-// ─────────────────────────────────────────────
-//  WATCH DEMO MODAL  —  drop-in for DevRoom
-//  Props: isOpen (bool), onClose (fn)
-// ─────────────────────────────────────────────
 
 const SCENES = [
   { id: 'create',  label: 'Room Created',     icon: '⚡', duration: 3500 },
@@ -36,7 +32,7 @@ const CHAT_MSGS = [
   { user: 'Sarah', color: '#34d399', msg: 'use memoization 💡', delay: 2500 },
 ];
 
-// Token color map
+
 const TC = { kw: '#c792ea', fn: '#82aaff', nm: '#f78c6c', st: '#c3e88d', pl: '#e2e8f0', cm: 'rgba(148,163,184,0.4)' };
 
 export default function WatchDemoModal({ isOpen, onClose }) {
@@ -44,14 +40,14 @@ export default function WatchDemoModal({ isOpen, onClose }) {
   const [progress, setProgress]   = useState(0);
   const [paused, setPaused]       = useState(false);
 
-  // Scene-specific state
+  
   const [roomId]                  = useState('debgaqd');
   const [typedName, setTypedName] = useState('');
   const [roomCreated, setRoomCreated] = useState(false);
   const [sarah, setSarah]         = useState(false);
   const [sarahTyping, setSarahTyping] = useState(false);
 
-  const [codeReveal, setCodeReveal] = useState(0); // chars revealed
+  const [codeReveal, setCodeReveal] = useState(0); 
   const [sarahCursor, setSarahCursor] = useState(false);
   const totalChars = flatCode.reduce((s, l) => s + l.raw.length, 0);
 
@@ -83,7 +79,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
     setChatMessages([]);
   }, []);
 
-  // Progress bar ticker
+  
   useEffect(() => {
     if (!isOpen || paused) return;
     const dur = SCENES[scene].duration;
@@ -102,7 +98,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
     return () => clearInterval(progRef.current);
   }, [isOpen, scene, paused, resetScene]);
 
-  // Scene 0 — Room Created
+  
   useEffect(() => {
     if (!isOpen || scene !== 0) return;
     const NAME = 'm hamza';
@@ -118,7 +114,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
     return () => clearInterval(t);
   }, [isOpen, scene]);
 
-  // Scene 1 — Sarah joins
+  
   useEffect(() => {
     if (!isOpen || scene !== 1) return;
     const t1 = setTimeout(() => setSarah(true), 800);
@@ -127,7 +123,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [isOpen, scene]);
 
-  // Scene 2 — Live coding
+  
   useEffect(() => {
     if (!isOpen || scene !== 2) return;
     let chars = 0;
@@ -139,7 +135,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
     return () => clearInterval(interval);
   }, [isOpen, scene, totalChars]);
 
-  // Scene 3 — Run code
+  
   useEffect(() => {
     if (!isOpen || scene !== 3) return;
     const t1 = setTimeout(() => setRunning(true), 600);
@@ -155,7 +151,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearInterval(timerRef.current); };
   }, [isOpen, scene]);
 
-  // Scene 4 — Chat
+  
   useEffect(() => {
     if (!isOpen || scene !== 4) return;
     const t0 = setTimeout(() => setChatTab(true), 400);
@@ -165,7 +161,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
     return () => { clearTimeout(t0); timers.forEach(clearTimeout); };
   }, [isOpen, scene]);
 
-  // Escape key
+  
   useEffect(() => {
     if (!isOpen) return;
     const fn = (e) => { if (e.key === 'Escape') onClose(); };
@@ -173,14 +169,14 @@ export default function WatchDemoModal({ isOpen, onClose }) {
     return () => document.removeEventListener('keydown', fn);
   }, [isOpen, onClose]);
 
-  // Reset on open
+  
   useEffect(() => {
     if (isOpen) resetScene(0);
   }, [isOpen, resetScene]);
 
   if (!isOpen) return null;
 
-  // ── Render helpers ────────────────────────────────────
+  
   const renderCodeWithReveal = () => {
     let charsLeft = codeReveal;
     return flatCode.map((line) => {

@@ -2,18 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import WatchDemoModal from './WatchDemoModal';
 
-// ── HOLE-2 FIX: Centralise API base URL — never hardcode in multiple places,
-//   and swap to an env variable so production doesn't point at localhost.
+
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-// ── HOLE-3 FIX: Input length caps — prevents oversized payloads reaching server.
+
 const MAX_NAME_LEN   = 32;
 const MAX_ROOMID_LEN = 20;
 
-// ── HOLE-4 FIX: Whitelist helper — strips anything that isn't a safe printable
-//   character so script-injection strings are rejected at the source.
+
 const sanitizeName   = (v) => v.replace(/[<>"'`;&]/g, '').slice(0, MAX_NAME_LEN);
-// ── HOLE-5 FIX: Room IDs must be alphanumeric + hyphens only (matches server format).
+
 const ROOM_ID_RE     = /^[a-z0-9][a-z0-9-]{1,18}[a-z0-9]$/;
 
 const Home = () => {
@@ -23,8 +21,7 @@ const Home = () => {
   const ringRef = useRef(null);
   const ring2Ref = useRef(null);
   const navigate = useNavigate();
-  // ── HOLE-8 FIX: Initialise mousePos to viewport centre so the draw loop
-  //   never reads undefined/NaN before the first mousemove event fires.
+  
   const mousePos = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
 
   const [activeTab, setActiveTab] = useState('create');
@@ -32,20 +29,20 @@ const Home = () => {
   const [joinName, setJoinName] = useState('');
   const [joinRoomId, setJoinRoomId] = useState('');
   const [nameError, setNameError] = useState(false);
-  const [phase, setPhase] = useState(0); // 0=nothing, 1=CODE visible, 2=TOGETHER visible
+  const [phase, setPhase] = useState(0); 
   const [typedCode, setTypedCode] = useState('');
   const [typedTogether, setTypedTogether] = useState('');
 
   const CODE_TEXT = 'Code';
   const TOGETHER_TEXT = 'Together.';
 
-  // Entrance sequence
+  
   useEffect(() => {
     let t1 = setTimeout(() => setPhase(1), 400);
     return () => clearTimeout(t1);
   }, []);
 
-  // Typewriter for "Code"
+  
   useEffect(() => {
     if (phase < 1) return;
     let i = 0;
@@ -60,7 +57,7 @@ const Home = () => {
     return () => clearInterval(interval);
   }, [phase]);
 
-  // Typewriter for "Together."
+  
   useEffect(() => {
     if (phase < 2) return;
     let i = 0;
@@ -72,7 +69,7 @@ const Home = () => {
     return () => clearInterval(interval);
   }, [phase]);
 
-  // CURSOR
+  
   useEffect(() => {
     let mx = 0, my = 0, rx = 0, ry = 0, r2x = 0, r2y = 0, animId;
     const onMove = (e) => {
@@ -92,13 +89,11 @@ const Home = () => {
     };
     loop();
     document.addEventListener('mousemove', onMove);
-    // ── HOLE-9 FIX: Cleanup order matches setup order — cancel animation frame
-    //   first, then remove the event listener, preventing a stale-closure tick
-    //   that would still read the (now-removed) listener's last mx/my values.
+    
     return () => { cancelAnimationFrame(animId); document.removeEventListener('mousemove', onMove); };
   }, []);
 
-  // CANVAS — always running, no React state dependencies
+  
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -107,7 +102,7 @@ const Home = () => {
     resize();
     window.addEventListener('resize', resize);
 
-    // ── PARTICLES ──────────────────────────────────────────────
+    
     const particles = Array.from({ length: 180 }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
@@ -119,7 +114,7 @@ const Home = () => {
       hue: Math.random() < 0.2 ? 280 : 200,
     }));
 
-    // ── ORBS ───────────────────────────────────────────────────
+    
     const orbs = [
       { x: canvas.width*0.15, y: canvas.height*0.3,  r:320, color:'rgba(14,165,233,0.08)',  vx:0.12,  vy:0.08  },
       { x: canvas.width*0.8,  y: canvas.height*0.6,  r:250, color:'rgba(139,92,246,0.07)',  vx:-0.1,  vy:0.15  },
@@ -127,13 +122,13 @@ const Home = () => {
       { x: canvas.width*0.9,  y: canvas.height*0.1,  r:180, color:'rgba(56,189,248,0.05)',  vx:-0.14, vy:0.1   },
     ];
 
-    // ── WORMHOLE ───────────────────────────────────────────────
+    
     const wormhole = {
       x: canvas.width * 0.78, y: canvas.height * 0.18,
       rings: Array.from({length:8},(_,i)=>({ r:28+i*26, alpha:0.03+i*0.012, rot:i*0.4 }))
     };
 
-    // ── METEORS ────────────────────────────────────────────────
+    
     const spawnMeteor = () => ({
       x: Math.random() * canvas.width * 1.4 - canvas.width * 0.2,
       y: -20,
@@ -148,14 +143,14 @@ const Home = () => {
     const meteors = Array.from({length:6}, spawnMeteor);
     meteors.forEach((m,i) => { m.y = -200 - i * 300; });
 
-    // ── SONAR PINGS ────────────────────────────────────────────
+    
     const pings = [
       { x: canvas.width * 0.2,  y: canvas.height * 0.7,  r:0, maxR:220, speed:0.9, alpha:0.3, phase: 0        },
       { x: canvas.width * 0.85, y: canvas.height * 0.45, r:0, maxR:180, speed:1.1, alpha:0.25, phase: Math.PI  },
       { x: canvas.width * 0.5,  y: canvas.height * 0.1,  r:0, maxR:260, speed:0.7, alpha:0.2, phase: Math.PI/2 },
     ];
 
-    // ── BINARY RAIN COLUMNS ────────────────────────────────────
+    
     const COLS = Math.floor(canvas.width / 28);
     const rain = Array.from({length: COLS}, (_, i) => ({
       x: i * 28 + 14,
@@ -168,7 +163,7 @@ const Home = () => {
       len: 5 + Math.floor(Math.random() * 10),
     }));
 
-    // ── DNA HELIX ──────────────────────────────────────────────
+    
     const dna = {
       x: canvas.width * 0.06,
       baseY: canvas.height * 0.5,
@@ -176,7 +171,7 @@ const Home = () => {
       strands: 20,
     };
 
-    // ── ELECTRIC ARCS ─────────────────────────────────────────
+  
     const arcs = Array.from({length:4}, () => ({
       x1: Math.random() * canvas.width,
       y1: Math.random() * canvas.height,
@@ -189,7 +184,7 @@ const Home = () => {
       maxLife: 8,
     }));
 
-    // ── GRID PULSE NODES ───────────────────────────────────────
+    
     const gridSpacing = 90;
     const nodes = [];
     for (let gx = gridSpacing; gx < canvas.width; gx += gridSpacing) {
@@ -203,7 +198,7 @@ const Home = () => {
     let t = 0;
     let animId;
 
-    // ── HEX GRID ───────────────────────────────────────────────
+    
     const drawHexGrid = () => {
       const hexSize = 40;
       const w = hexSize * 2;
@@ -227,7 +222,7 @@ const Home = () => {
       }
     };
 
-    // ── LIGHTNING helper ───────────────────────────────────────
+    
     const drawLightning = (x1, y1, x2, y2, alpha, depth) => {
       if (depth === 0) return;
       const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * 40;
@@ -239,18 +234,18 @@ const Home = () => {
       if (depth > 1 && Math.random() < 0.5) drawLightning(mx, my, mx + (Math.random()-0.5)*80, my + (Math.random()-0.5)*80, alpha*0.6, depth-1);
     };
 
-    // ── MAIN DRAW ─────────────────────────────────────────────
+    
     const draw = () => {
       t += 0.012;
 
-      // BG gradient
+      
       const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
       grad.addColorStop(0, '#020612'); grad.addColorStop(0.45, '#060b1c'); grad.addColorStop(1, '#08112a');
       ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       drawHexGrid();
 
-      // ── SCAN LINE ──
+      
       const scanY = ((t * 40) % (canvas.height + 120)) - 60;
       const scanGrad = ctx.createLinearGradient(0, scanY - 70, 0, scanY + 70);
       scanGrad.addColorStop(0, 'transparent');
@@ -261,7 +256,7 @@ const Home = () => {
       ctx.fillStyle = scanGrad;
       ctx.fillRect(0, Math.max(0, scanY - 70), canvas.width, 140);
 
-      // ── WORMHOLE ──
+      
       wormhole.rings.forEach((ring, i) => {
         ring.rot += 0.008 + i * 0.003;
         const pulse = Math.sin(t * 2 + i * 0.5) * 0.02 + ring.alpha;
@@ -279,7 +274,7 @@ const Home = () => {
         ctx.restore();
       });
 
-      // ── ORBS ──
+      
       orbs.forEach(orb => {
         orb.x += orb.vx; orb.y += orb.vy;
         if (orb.x < -orb.r) orb.x = canvas.width + orb.r;
@@ -292,7 +287,7 @@ const Home = () => {
         ctx.fillStyle = g; ctx.fill();
       });
 
-      // ── SONAR PINGS ──
+      
       pings.forEach(p => {
         p.r = ((t * p.speed * 30 + p.phase * 30) % p.maxR);
         const fade = 1 - p.r / p.maxR;
@@ -306,7 +301,7 @@ const Home = () => {
         ctx.lineWidth = 0.8; ctx.stroke();
       });
 
-      // ── BINARY RAIN ──
+      
       ctx.font = '11px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
       rain.forEach(col => {
@@ -327,7 +322,7 @@ const Home = () => {
         }
       });
 
-      // ── DNA HELIX ──
+      
       for (let i = 0; i < dna.strands; i++) {
         const progress = i / dna.strands;
         const yPos = dna.baseY - dna.height / 2 + progress * dna.height;
@@ -346,7 +341,7 @@ const Home = () => {
         }
       }
 
-      // ── METEORS ──
+      
       meteors.forEach((m, idx) => {
         m.x += m.vx; m.y += m.vy;
         if (m.y > canvas.height + 40 || m.x > canvas.width + 40) {
@@ -369,7 +364,7 @@ const Home = () => {
         ctx.fillStyle = hg; ctx.fill();
       });
 
-      // ── ELECTRIC ARCS ──
+      
       arcs.forEach(arc => {
         arc.timer++;
         if (arc.timer >= arc.interval) {
@@ -386,7 +381,7 @@ const Home = () => {
         }
       });
 
-      // ── GRID PULSE NODES ──
+      
       nodes.forEach(n => {
         n.phase += n.speed;
         const s = Math.sin(n.phase) * 0.5 + 0.5;
@@ -401,7 +396,7 @@ const Home = () => {
         ctx.fillStyle = `rgba(56,189,248,${a * 2})`; ctx.fill();
       });
 
-      // ── DIAGONAL DATA STREAMS ──
+      
       for (let i = 0; i < 5; i++) {
         const streamX = ((t * 70 + i * 280) % (canvas.width + 400)) - 200;
         const sg = ctx.createLinearGradient(streamX - 90, 0, streamX + 90, 0);
@@ -414,7 +409,7 @@ const Home = () => {
         ctx.restore();
       }
 
-      // ── PARTICLES ──
+    
       const mx = mousePos.current.x, my = mousePos.current.y;
       particles.forEach(p => {
         const dx = p.x - mx, dy = p.y - my;
@@ -436,7 +431,7 @@ const Home = () => {
         ctx.fill();
       });
 
-      // ── PARTICLE CONNECTIONS ──
+      
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -452,7 +447,7 @@ const Home = () => {
         }
       }
 
-      // ── MOUSE GLOW ──
+    
       const mg = ctx.createRadialGradient(mx, my, 0, mx, my, 170);
       mg.addColorStop(0, 'rgba(56,189,248,0.1)');
       mg.addColorStop(0.5, 'rgba(139,92,246,0.04)');
@@ -468,11 +463,11 @@ const Home = () => {
       animId = requestAnimationFrame(draw);
     };
     draw();
-    // ── HOLE-9 FIX (canvas): cancel animation before removing resize listener.
+    
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize); };
   }, []);
 
-  // SCROLL REVEAL
+  
   useEffect(() => {
     const els = document.querySelectorAll('.reveal');
     const obs = new IntersectionObserver(entries => {
@@ -486,39 +481,36 @@ const Home = () => {
   const [joinLoading, setJoinLoading]     = useState(false);
   const [joinError, setJoinError]         = useState('');
   const [createError, setCreateError]     = useState('');
-  // HOLE-6 FIX (original): ref-based in-flight guards
+  
   const createInFlight = useRef(false);
   const joinInFlight   = useRef(false);
 
   const handleCreateRoom = async () => {
-    // ── HOLE-3 FIX: enforce max-length before any network call.
+    
     const trimmed = createName.trim().slice(0, MAX_NAME_LEN);
     if (!trimmed) { setNameError(true); return; }
-    // ── HOLE-6 FIX: block duplicate in-flight requests.
+   
     if (createInFlight.current) return;
-    // ── HOLE-7 FIX: also block if button is already in loading state
-    //   (keyboard Enter can fire onClick even when disabled attr is set).
-    if (createLoading) return;
+   
     createInFlight.current = true;
     setCreateError('');
     setCreateLoading(true);
 
     const roomId = Math.random().toString(36).substring(2, 9).toLowerCase();
 
-    // ── HOLE-10 FIX: use a flag so navigate() is called outside try/catch.
-    //   If navigate() or any post-try code throws, finally still runs cleanly.
+  
     let navigateTo = null;
     try {
-      // ── HOLE-2 FIX: use centralised API_BASE constant.
+      
       const res = await fetch(`${API_BASE}/create-room`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ── HOLE-1 FIX: use the already-trimmed+sanitized name in the body.
+        
         body: JSON.stringify({ roomId }),
       });
       const data = await res.json();
       if (!res.ok) { setCreateError(data.error || 'Failed to create room.'); return; }
-      // ── HOLE-1 FIX: encodeURIComponent on the sanitized name (not raw state).
+      
       navigateTo = `/room/${roomId}?username=${encodeURIComponent(trimmed)}`;
     } catch {
       setCreateError('Cannot reach server. Is it running?');
@@ -526,44 +518,43 @@ const Home = () => {
       setCreateLoading(false);
       createInFlight.current = false;
     }
-    // ── HOLE-10 FIX: navigate outside try so finally always completes first.
+    
     if (navigateTo) navigate(navigateTo);
   };
 
   const handleJoinRoom = async () => {
-    // ── HOLE-3 FIX: enforce max-lengths.
+    
     const trimmedName   = joinName.trim().slice(0, MAX_NAME_LEN);
     const trimmedRoomId = joinRoomId.trim().toLowerCase().slice(0, MAX_ROOMID_LEN);
 
     if (!trimmedName)   { setJoinError('Please enter your name.'); return; }
     if (!trimmedRoomId) { setJoinError('Please enter a Room ID.'); return; }
 
-    // ── HOLE-5 FIX: validate room ID format before hitting the server.
-    //   Prevents path-traversal attempts (../../etc) and other injection strings.
+    
     if (!ROOM_ID_RE.test(trimmedRoomId)) {
       setJoinError('Invalid Room ID format. Use only letters, numbers, and hyphens.');
       return;
     }
 
-    // ── HOLE-6 FIX: block duplicate in-flight requests.
+    
     if (joinInFlight.current) return;
-    // ── HOLE-7 FIX: block if already loading (keyboard Enter defence).
+    
     if (joinLoading) return;
     joinInFlight.current = true;
     setJoinError('');
     setJoinLoading(true);
 
-    // ── HOLE-10 FIX: navigate flag pattern.
+    
     let navigateTo = null;
     try {
-      // ── HOLE-2 FIX: use centralised API_BASE.
+      
       const res  = await fetch(`${API_BASE}/room-exists/${trimmedRoomId}`);
       const data = await res.json();
       if (!data.exists) {
         setJoinError('Room not found. Check the ID or create a new room.');
         return;
       }
-      // ── HOLE-1 FIX: sanitized + encoded username in URL.
+      
       navigateTo = `/room/${trimmedRoomId}?username=${encodeURIComponent(trimmedName)}`;
     } catch {
       setJoinError('Cannot reach server. Is it running?');
@@ -571,7 +562,7 @@ const Home = () => {
       setJoinLoading(false);
       joinInFlight.current = false;
     }
-    // ── HOLE-10 FIX: navigate outside try.
+    
     if (navigateTo) navigate(navigateTo);
   };
 
@@ -1126,7 +1117,7 @@ const Home = () => {
 
       <div className="dr-wrap" style={{position:'relative',zIndex:1,background:'transparent'}}>
 
-        {/* NAV */}
+        
         <nav className="dr-nav">
           <a href="/" className="dr-nav-logo" onMouseEnter={ce} onMouseLeave={cl}>
             <div className="dr-logo-icon">
@@ -1149,7 +1140,7 @@ const Home = () => {
           </button>
         </nav>
 
-        {/* HERO */}
+        
         <section className="dr-hero">
           <div className="dr-ambient-ring" style={{animationDelay:'0s'}}/>
           <div className="dr-ambient-ring" style={{animationDelay:'1.3s'}}/>
@@ -1197,7 +1188,7 @@ const Home = () => {
               DevRoom is a <span>real-time collaborative IDE</span> where your whole team codes in sync — live cursors, instant execution, zero setup.
             </p>
 
-            {/* CARD */}
+            
             <div className="dr-card">
               <div className="dr-card-inner">
                 <div className="dr-tabs">
@@ -1213,7 +1204,7 @@ const Home = () => {
                       value={createName}
                       maxLength={MAX_NAME_LEN}
                       onChange={e=>{
-                        // ── HOLE-4 FIX: sanitize on every keystroke.
+                        
                         setCreateName(sanitizeName(e.target.value));
                         setNameError(false);
                         setCreateError('');
@@ -1239,7 +1230,7 @@ const Home = () => {
                       value={joinName}
                       maxLength={MAX_NAME_LEN}
                       onChange={e=>{
-                        // ── HOLE-4 FIX: sanitize on every keystroke.
+                        
                         setJoinName(sanitizeName(e.target.value));
                         setJoinError('');
                       }}
@@ -1253,8 +1244,7 @@ const Home = () => {
                       value={joinRoomId}
                       maxLength={MAX_ROOMID_LEN}
                       onChange={e=>{
-                        // ── HOLE-5 FIX: normalise to lowercase immediately so
-                        //   the user sees the canonical form as they type.
+                        
                         setJoinRoomId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
                         setJoinError('');
                       }}
@@ -1273,7 +1263,7 @@ const Home = () => {
               </div>
             </div>
 
-            {/* TERMINAL */}
+            
             <div className="dr-terminal">
               <div className="dr-terminal-window">
                 <div className="dr-terminal-bar">
@@ -1305,7 +1295,7 @@ const Home = () => {
           </div>
         </section>
 
-        {/* STATS */}
+        
         <div className="dr-stats reveal reveal-stagger">
           <div className="dr-stats-inner">
             {[['50+','Languages Supported'],['<50ms','Sync Latency'],['∞','Free Sessions'],['100%','Browser-Based']].map(([n,l])=>(
@@ -1316,7 +1306,7 @@ const Home = () => {
 
         <hr className="dr-hr"/>
 
-        {/* FEATURES */}
+        
         <section className="dr-features reveal" id="features">
           <div className="dr-sec-header">
             <div className="dr-sec-badge">// why devroom</div>
@@ -1348,7 +1338,7 @@ const Home = () => {
 
         <hr className="dr-hr"/>
 
-        {/* LANGUAGES */}
+        
         <section className="dr-langs reveal" id="languages">
           <div className="dr-sec-header">
             <div className="dr-sec-badge">// supported languages</div>
@@ -1365,7 +1355,7 @@ const Home = () => {
           ))}
         </section>
 
-        {/* CTA */}
+        
         <section className="dr-cta reveal">
           <div className="dr-cta-grid-overlay"/>
           <h2 className="dr-cta-title">Ready to code<br/>together?</h2>
@@ -1376,7 +1366,7 @@ const Home = () => {
           </div>
         </section>
 
-        {/* FOOTER */}
+        
         <footer className="dr-footer">
           <div className="dr-footer-logo">
             <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
