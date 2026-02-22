@@ -1132,7 +1132,7 @@ const Home = () => {
           </a>
           <ul className="dr-nav-links">
             {['Features','Languages','Docs'].map(l => (
-              <li key={l}><a href={l==='Features'?'#features':l==='Languages'?'#languages':'#'} onMouseEnter={ce} onMouseLeave={cl}>{l}</a></li>
+              <li key={l}><a href={l==='Features'?'#features':l==='Languages'?'#languages':'/'} onMouseEnter={ce} onMouseLeave={cl}>{l}</a></li>
             ))}
           </ul>
           <button className="dr-nav-cta" onMouseEnter={ce} onMouseLeave={cl} onClick={handleCreateRoom}>
