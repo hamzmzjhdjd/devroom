@@ -558,7 +558,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
                 {/* Scene 1: User joins */}
                 {scene === 1 && (
                   <div className="dr-demo-scene" style={{ padding: '30px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div style={{ fontSize: 11, color: 'rgba(148,163,184,0.35)', marginBottom: 20, letterSpacing: 1 }}>// room · {roomId}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(148,163,184,0.35)', marginBottom: 20, letterSpacing: 1 }}> {roomId}</div>
                     {/* URL bar mock */}
                     <div style={{
                       background: 'rgba(2,6,14,0.8)', border: '1px solid rgba(56,189,248,0.1)',
@@ -684,7 +684,7 @@ export default function WatchDemoModal({ isOpen, onClose }) {
                 {/* Scene 4: Chat */}
                 {scene === 4 && (
                   <div className="dr-demo-scene" style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 10 }}>
-                    <div style={{ fontSize: 10, color: 'rgba(148,163,184,0.25)', textAlign: 'center', marginBottom: 8, letterSpacing: 1 }}>// team chat · room {roomId}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(148,163,184,0.25)', textAlign: 'center', marginBottom: 8, letterSpacing: 1 }}> room {roomId}</div>
                     {chatMessages.map((m, i) => (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'flex-end', gap: 8,

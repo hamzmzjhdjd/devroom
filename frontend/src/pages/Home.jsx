@@ -1309,7 +1309,7 @@ const Home = () => {
         
         <section className="dr-features reveal" id="features">
           <div className="dr-sec-header">
-            <div className="dr-sec-badge">// why devroom</div>
+            <div className="dr-sec-badge"></div>
             <h2 className="dr-sec-title">Everything your team needs.<br/>Nothing it doesn't.</h2>
           </div>
           <div className="dr-grid reveal-stagger reveal">
@@ -1341,7 +1341,7 @@ const Home = () => {
         
         <section className="dr-langs reveal" id="languages">
           <div className="dr-sec-header">
-            <div className="dr-sec-badge">// supported languages</div>
+            <div className="dr-sec-badge"></div>
             <h2 className="dr-sec-title">Code in any language.</h2>
           </div>
           {[false,true].map((rev,ri)=>(

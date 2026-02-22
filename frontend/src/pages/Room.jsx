@@ -60,7 +60,7 @@ const MAX_CODE_LEN    = 100_000;
 
 const sanitiseUsername = (raw) => {
   if (!raw || typeof raw !== 'string') return 'Anonymous';
-  const c = raw.replace(/<[^>]*>/g, '').replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 30);
+  const c = raw.replace(/<[^>]*>/g, '').replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, 30);
   return c || 'Anonymous';
 };
 
@@ -1526,7 +1526,7 @@ const Room = () => {
               <div className="output-panel">
                 <div className="output-resize"/>
                 <div className="output-header">
-                  <span className="output-title">// output</span>
+                  <span className="output-title"></span>
                   {outputStatus !== 'idle' && (
                     <span className={`output-status ${outputStatus}`}>
                       {outputStatus === 'running' ? '⟳ running' : outputStatus === 'success' ? '✓ success' : '✗ error'}
